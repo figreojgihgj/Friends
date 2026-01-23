@@ -13,8 +13,10 @@
   },
   "license": "ISC",
   "dependencies": {
+    "@henrygd/queue": "^1.2.0",
     "foxts": "^5.0.4",
-    "js-yaml": "^4.1.1"
+    "js-yaml": "^4.1.1",
+    "valibot": "^1.2.0"
   },
   "devDependencies": {
     "@swc-node/register": "^1.11.1",
