@@ -4,6 +4,7 @@ import { fastStringArrayJoin } from 'foxts/fast-string-array-join';
 import { newQueue } from '@henrygd/queue';
 
 import * as v from 'valibot';
+import { extractErrorMessage } from 'foxts/extract-error-message';
 import { pickOne } from 'foxts/pick-random';
 
 const IndividualLinkSchema = v.object({
@@ -17,7 +18,7 @@ const LinksDocumentSchema = v.record(v.string(), IndividualLinkSchema);
 
 const queue = newQueue(16);
 
-// const topUserAgentsPromise = fetch('https://cdn.jsdelivr.net/npm/top-user-agents@2.1.91/src/desktop.json').then(r => r.json());
+const topUserAgentsPromise = fetch('https://cdn.jsdelivr.net/npm/top-user-agents@2.1.91/src/desktop.json').then(r => r.json());
 
 // Get document, or throw exception on error
 (async () => {
@@ -55,26 +56,28 @@ const enum CheckStatus {
 async function checkAlive(url: string, timeoutMs = 5000): Promise<CheckStatus> {
   try {
     const signal = AbortSignal.timeout(timeoutMs);
-    try {
-      let res = await fetch(url, { method: 'HEAD', redirect: 'manual', signal, headers: { 'User-Agent': 'Mozilla/5.0 Sukka Friends Link Checker (https://skk.moe/friends/; https://github.com/SukkaW/Friends)' } });
-      if (res.status >= 400) {
-        res = await fetch(url, { method: 'GET', headers: { Range: 'bytes=0-0' }, redirect: 'manual', signal });
-      }
-      if (res.status >= 300 && res.status < 400) {
-        console.log(`[redirected] ${url} -> ${res.headers.get('Location')}`);
-        return CheckStatus.Redirected;
-      }
-      if (res.ok) {
-        console.log(`[alive] ${url}`);
-        return CheckStatus.Alive;
-      }
-
-      console.log(`[dead] ${url} (status: ${res.status})`);
-      return CheckStatus.Dead;
-    } finally {
-      // AbortSignal.timeout cleans itself up; no manual timeout clearing required.
+    let res = await fetch(url, { method: 'HEAD', redirect: 'manual', signal, headers: { 'User-Agent': 'Mozilla/5.0 Sukka Friends Link Checker (https://skk.moe/friends/; https://github.com/SukkaW/Friends)' } });
+    // Either 405 Method Not Allowed or 404 Not Found (due to unregistered HEAD routes)
+    if (res.status >= 400) {
+      res = await fetch(url, { method: 'GET', headers: { Range: 'bytes=0-0' }, redirect: 'manual', signal });
     }
+    // In case of 403 Forbidden, try again with a common User-Agent
+    if (res.status === 403) {
+      res = await fetch(url, { method: 'GET', headers: { 'User-Agent': pickOne(await topUserAgentsPromise) }, redirect: 'manual', signal });
+    }
+    if (res.status >= 300 && res.status < 400) {
+      console.log(`[redirected] ${url} -> ${res.headers.get('Location')}`);
+      return CheckStatus.Redirected;
+    }
+    if (res.ok) {
+      console.log(`[alive] ${url}`);
+      return CheckStatus.Alive;
+    }
+
+    console.log(`[dead] ${url} (status: ${res.status})`);
+    return CheckStatus.Dead;
   } catch (e) {
+    console.log(`[dead] ${url} (error: ${extractErrorMessage(e)})`);
     return CheckStatus.Dead;
   }
 }
