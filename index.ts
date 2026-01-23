@@ -56,17 +56,17 @@ async function checkAlive(url: string, timeoutMs = 5000): Promise<CheckStatus> {
   try {
     const signal = AbortSignal.timeout(timeoutMs);
     try {
-      let res = await fetch(url, { method: 'HEAD', redirect: 'follow', signal, headers: { 'User-Agent': 'Mozilla/5.0 Sukka Friends Link Checker (https://skk.moe/friends/; https://github.com/SukkaW/Friends)' } });
-      if (res.status === 405 || res.status === 501) {
-        res = await fetch(url, { method: 'GET', headers: { Range: 'bytes=0-0' }, redirect: 'follow', signal });
-      }
-      if (res.ok) {
-        console.log(`[alive] ${url}`);
-        return CheckStatus.Alive;
+      let res = await fetch(url, { method: 'HEAD', redirect: 'manual', signal, headers: { 'User-Agent': 'Mozilla/5.0 Sukka Friends Link Checker (https://skk.moe/friends/; https://github.com/SukkaW/Friends)' } });
+      if (res.status >= 400) {
+        res = await fetch(url, { method: 'GET', headers: { Range: 'bytes=0-0' }, redirect: 'manual', signal });
       }
       if (res.status >= 300 && res.status < 400) {
         console.log(`[redirected] ${url} -> ${res.headers.get('Location')}`);
         return CheckStatus.Redirected;
+      }
+      if (res.ok) {
+        console.log(`[alive] ${url}`);
+        return CheckStatus.Alive;
       }
 
       console.log(`[dead] ${url} (status: ${res.status})`);
