@@ -24,7 +24,6 @@ jobs:
           cache: "pnpm"
       - run: pnpm i
       - run: pnpm run build
-      - run: cp -r src/img dist/img
       - uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
