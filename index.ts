@@ -57,15 +57,38 @@ const enum CheckStatus {
 async function checkAlive(url: string, timeoutMs = 5000): Promise<CheckStatus> {
   try {
     return await asyncRetry(async () => {
-      const signal = AbortSignal.timeout(timeoutMs);
-      let res = await fetch(url, { method: 'HEAD', redirect: 'manual', signal, headers: { 'User-Agent': 'Mozilla/5.0 Sukka Friends Link Checker (https://skk.moe/friends/; https://github.com/SukkaW/Friends)' } });
+      let res = await fetch(
+        url,
+        {
+          method: 'HEAD',
+          redirect: 'manual',
+          signal: AbortSignal.timeout(timeoutMs),
+          headers: { 'User-Agent': 'Mozilla/5.0 Sukka Friends Link Checker (https://skk.moe/friends/; https://github.com/SukkaW/Friends)' }
+        }
+      );
       // Either 405 Method Not Allowed or 404 Not Found (due to unregistered HEAD routes)
       if (res.status >= 400) {
-        res = await fetch(url, { method: 'GET', headers: { Range: 'bytes=0-0' }, redirect: 'manual', signal });
+        res = await fetch(
+          url,
+          {
+            method: 'GET',
+            headers: { Range: 'bytes=0-0' },
+            redirect: 'manual',
+            signal: AbortSignal.timeout(timeoutMs),
+          }
+        );
       }
       // In case of 403 Forbidden, try again with a common User-Agent
       if (res.status === 403) {
-        res = await fetch(url, { method: 'GET', headers: { 'User-Agent': pickOne(await topUserAgentsPromise) }, redirect: 'manual', signal });
+        res = await fetch(
+          url,
+          {
+            method: 'GET',
+            headers: { Range: 'bytes=0-0', 'User-Agent': pickOne(await topUserAgentsPromise) },
+            redirect: 'manual',
+            signal: AbortSignal.timeout(timeoutMs),
+          }
+        );
       }
       if (res.status >= 300 && res.status < 400) {
         console.log(`[redirected] ${url} -> ${res.headers.get('Location')}`);
